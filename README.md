@@ -4,9 +4,8 @@
 
 **Deixa as tarefas repetitivas do _Task Hero_ no automático, guardar no baú, abrir os baús e sintetizar no cubo, sem você ficar clicando.**
 
-É um programa de Windows com uma janelinha simples, você marca o que quer que ele faça e ele cuida do
-resto. Não precisa instalar nada, não precisa configurar nada, é só abrir o jogo, abrir o programa e
-marcar as caixinhas.
+É um programa de Windows onde você marca o que quer que ele faça e ele cuida do resto. Não precisa
+instalar nada, não precisa configurar nada, é só abrir o jogo, abrir o programa e marcar as caixinhas.
 
 <img src="docs/janela.png" alt="Janela do Task Hero Auto" width="430">
 
