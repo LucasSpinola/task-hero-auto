@@ -1,0 +1,21 @@
+{
+  "tabs": [
+    "tab1",
+    "tab2"
+  ],
+  "trigger_threshold": 0.74,
+  "poll_interval_s": 1.2,
+  "ui_wait_ms": 450,
+  "cooldown_s": 5.0,
+  "auto_open_chests": false,
+  "chest_threshold": 0.78,
+  "auto_synth": false,
+  "synth_interval_min": 10.0,
+  "hotkeys": {
+    "toggle": "f8",
+    "chests": "f7",
+    "synth": "f6",
+    "quit": "f9"
+  },
+  "click_backend": "pyautogui"
+}

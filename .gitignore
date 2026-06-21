@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+build/
+dist/
+*.spec
+
+# o .exe nao vai pro git (66 MB), vai pela aba Releases do GitHub
+*.exe
+
+config.json
+th_shots/
+
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini

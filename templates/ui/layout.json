@@ -1,0 +1,74 @@
+{
+  "stash_banner": {
+    "w": 176,
+    "h": 22,
+    "center_in_tpl": [
+      88,
+      11
+    ]
+  },
+  "offsets_from_banner_center": {
+    "tab1": [
+      -131,
+      43
+    ],
+    "tab2": [
+      -87,
+      43
+    ],
+    "guardar_tudo": [
+      44,
+      388
+    ],
+    "close": [
+      124,
+      3
+    ],
+    "tab3": [
+      -43,
+      43
+    ]
+  },
+  "scene_from_btn_open": [
+    -352,
+    -161,
+    14,
+    37
+  ],
+  "hero_banner": {
+    "w": 176,
+    "h": 22,
+    "center_in_tpl": [
+      88,
+      11
+    ]
+  },
+  "chest_from_hero_center": [
+    -110,
+    384
+  ],
+  "cube_from_hero_center": [
+    62,
+    388
+  ],
+  "cube_banner": {
+    "w": 176,
+    "h": 22,
+    "center_in_tpl": [
+      88,
+      11
+    ]
+  },
+  "cube_fill_from_banner": [
+    -44,
+    271
+  ],
+  "cube_create_from_banner": [
+    81,
+    271
+  ],
+  "cube_close_from_banner": [
+    141,
+    2
+  ]
+}
