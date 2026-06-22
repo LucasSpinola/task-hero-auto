@@ -17,7 +17,7 @@ import ui
 import vision
 from assets import Assets
 
-VERSION = "v1"
+VERSION = "v2"
 
 
 def set_dpi_aware() -> None:
@@ -103,6 +103,7 @@ def console_run(cfg, A) -> int:
     import threading
     import engine
     e = engine.Engine(cfg, A)
+    e.active.set()   # modo console roda direto
     if cfg.auto_open_chests:
         e.chests.set()
     if cfg.auto_synth:

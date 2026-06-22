@@ -30,13 +30,14 @@ você faz outra coisa.
 
 - **Guardar no baú,** quando aparece o aviso de inventário cheio, ele abre o baú e guarda tudo, em todas
   as abas que você tiver como 1, 2 e também a 3, que ele percebe sozinho se já possui.
-- **Abrir os baús,** aquelas caixinhas azul e marrom que aparecem no combate ele clica assim que surgem.
-- **Sintetizar no cubo,** de tempos em tempos ele abre o cubo, usa o preenchimento automático e cria,
-  repetindo até acabar os itens, o intervalo vem em 10 minutos e dá pra mudar.
+- **Abrir os baús,** aquelas caixinhas que aparecem no combate, a azul, a marrom e a do boss, a vermelha,
+  ele clica assim que surgem.
+- **Sintetizar no cubo,** de tempos em tempos ele abre o cubo, preenche e cria sozinho, e você escolhe
+  até qual raridade ele vai, de cinza até roxo, o intervalo vem em 10 minutos e dá pra mudar.
 - **Funciona sem ajuste,** ele se vira com a janela do jogo em qualquer lugar e tamanho, e em qualquer
   monitor.
-- **Fácil de controlar,** uma janelinha com caixinhas pra ligar e desligar, com o status e um histórico
-  do que ele fez.
+- **Você no controle,** marca as caixinhas e clica em Iniciar, e dá pra pausar quando quiser, com o
+  status e um histórico do que ele fez.
 - **Fica no seu canto,** quando você fecha no X ele vai pra bandeja do Windows e continua rodando, e dá
   pra marcar pra abrir junto com o computador.
 - **Seguro,** começa tudo desligado, e se você jogar o mouse no canto superior esquerdo da tela ele para
@@ -60,11 +61,11 @@ Bem pouca coisa, só isto:
 4. Marque o que você quer no automático:
    - **Guardar no baú quando o inventário encher**
    - **Abrir os baús que aparecem**
-   - **Sintetizar no cubo de tempos em tempos**
+   - **Sintetizar no cubo**, e escolha no menu até qual raridade ele sintetiza
    - **Iniciar junto com o Windows**, se quiser que ele abra sozinho ao ligar o PC
-5. Pronto, pode deixar rolando, e se quiser tirar da frente é só fechar no **X**, que ele continua
-   trabalhando na bandeja. Pra encerrar de vez, clique no ícone da bandeja e escolha **Sair**, ou aperte
-   **F9**.
+5. Clique no botão **Iniciar**, e pronto, pode deixar rolando. Quando quiser parar é só clicar em
+   **Pausar**. Se quiser tirar a janela da frente, feche no **X** que ele continua na bandeja, e pra
+   encerrar de vez clique no ícone da bandeja e escolha **Sair**, ou aperte **F9**.
 
 Se preferir o teclado, dá pra ligar e desligar por atalho a qualquer momento, **F8** guarda, **F7**
 abre os baús, **F6** sintetiza e **F9** sai.

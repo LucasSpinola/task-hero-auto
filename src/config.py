@@ -38,6 +38,7 @@ class Config:
     chest_threshold: float = 0.78        # confianca minima p/ detectar um bau
     auto_synth: bool = False             # F6: sintese no cubo a cada X min
     synth_interval_min: float = 10.0     # intervalo da sintese (minutos)
+    synth_max_rarity: str = "azul"       # sintetiza ate esta cor (cinza..roxo)
     hotkeys: dict = field(default_factory=lambda: {
         "toggle": "f8", "chests": "f7", "synth": "f6", "quit": "f9"})
     click_backend: str = "pyautogui"     # ou "pydirectinput"
@@ -57,6 +58,7 @@ class Config:
         d.chest_threshold = float(data.get("chest_threshold", d.chest_threshold))
         d.auto_synth = bool(data.get("auto_synth", d.auto_synth))
         d.synth_interval_min = float(data.get("synth_interval_min", d.synth_interval_min))
+        d.synth_max_rarity = str(data.get("synth_max_rarity", d.synth_max_rarity)).lower()
         d.hotkeys = {**d.hotkeys, **dict(data.get("hotkeys", {}))}
         d.click_backend = data.get("click_backend", d.click_backend)
         return d

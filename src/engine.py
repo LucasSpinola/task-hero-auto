@@ -59,11 +59,12 @@ class Engine:
         self.cfg = cfg
         self.A = A
         self.tr = Tracker(A)
+        self.active = threading.Event()    # mestre: Iniciar/Pausar (comeca pausado)
         self.running = threading.Event()   # auto-guardar (INVEN FULL)
         self.chests = threading.Event()    # auto-abrir baus
         self.synth = threading.Event()     # auto-sintese (cubo) periodica
         self.quit = threading.Event()
-        self.status = "iniciando..."
+        self.status = "Pausado"
         self._armed = True
         self._last_action = 0.0
         self._last_synth = 0.0
@@ -75,7 +76,10 @@ class Engine:
         l, t, r, b = self.tr.roi
         sub = scr.gray[t:b, l:r]
         n = 0
-        for name, tpl in (("azul", self.A.chest_blue), ("marrom", self.A.chest_brown)):
+        for name, tpl in (("azul", self.A.chest_blue), ("marrom", self.A.chest_brown),
+                          ("boss", self.A.chest_boss)):
+            if tpl is None:
+                continue
             m = vision.locate(sub, tpl, vision.near(self.tr.scale))
             if m is not None and m.conf >= self.cfg.chest_threshold:
                 ax, ay = scr.to_abs(l + m.cx, t + m.cy)
@@ -85,6 +89,9 @@ class Engine:
         return n
 
     def _tick(self) -> None:
+        if not self.active.is_set():
+            self.status = "Pausado"
+            return
         scr = vision.grab_screen()
         if self.tr.roi is None:
             self.tr.acquire(scr)

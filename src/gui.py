@@ -1,4 +1,4 @@
-"""Janela (tkinter) com as caixinhas, status, log e bandeja."""
+"""Janela (tkinter) escura com Iniciar/Pausar, caixinhas, status, log e bandeja."""
 from __future__ import annotations
 
 import os
@@ -15,6 +15,20 @@ from config import resource_dir
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 RUN_NAME = "TaskHeroAutoStash"
+
+# paleta escura
+BG = "#16171d"
+CARD = "#23252e"
+COMBO = "#2c2f3a"
+TXT = "#e6e8ee"
+SUB = "#8b90a0"
+CARDLBL = "#aeb4c2"
+GREEN = "#22c55e"
+GREEN_D = "#16a34a"
+AMBER = "#f59e0b"
+AMBER_D = "#d97706"
+
+RAR_DISPLAY = ["Cinza", "Verde", "Azul", "Amarelo", "Vermelho", "Roxo"]
 
 
 def _icon_path() -> str:
@@ -100,6 +114,10 @@ def _make_tray(root, engine):
     def show(icon=None, item=None):
         root.after(0, root.deiconify)
 
+    def toggle_active(icon=None, item=None):
+        ev = engine.active
+        root.after(0, lambda: (ev.clear() if ev.is_set() else ev.set()))
+
     def toggle_guardar(icon=None, item=None):
         ev = engine.running
         root.after(0, lambda: (ev.clear() if ev.is_set() else ev.set()))
@@ -113,8 +131,9 @@ def _make_tray(root, engine):
 
     menu = pystray.Menu(
         pystray.MenuItem("Mostrar", show, default=True),
-        pystray.MenuItem("Auto-guardar", toggle_guardar, checked=lambda i: engine.running.is_set()),
-        pystray.MenuItem("Auto-abrir baus", toggle_baus, checked=lambda i: engine.chests.is_set()),
+        pystray.MenuItem("Iniciar / Pausar", toggle_active, checked=lambda i: engine.active.is_set()),
+        pystray.MenuItem("Guardar", toggle_guardar, checked=lambda i: engine.running.is_set()),
+        pystray.MenuItem("Abrir baus", toggle_baus, checked=lambda i: engine.chests.is_set()),
         pystray.MenuItem("Sair", quit_app),
     )
     icon = pystray.Icon(RUN_NAME, img, "Task Hero Auto", menu)
@@ -164,9 +183,9 @@ def run(version: str = "") -> int:
 
     root = tk.Tk()
     root.title("Task Hero Auto")
-    root.geometry("480x560")
-    root.minsize(440, 520)
-    root.configure(bg="#f4f5f7")
+    root.geometry("470x630")
+    root.minsize(440, 580)
+    root.configure(bg=BG)
     try:
         root.iconbitmap(_icon_path())
     except Exception:
@@ -175,21 +194,29 @@ def run(version: str = "") -> int:
     try:
         style = ttk.Style(root)
         style.theme_use("clam")
-        style.configure(".", background="#f4f5f7")
-        style.configure("Title.TLabel", font=("Segoe UI Semibold", 15), background="#f4f5f7")
-        style.configure("Sub.TLabel", font=("Segoe UI", 9), foreground="#6b7280", background="#f4f5f7")
-        style.configure("St.TLabel", font=("Segoe UI", 10), background="#f4f5f7")
-        style.configure("TCheckbutton", font=("Segoe UI", 10), background="#f4f5f7")
-        style.configure("Card.TLabelframe", background="#f4f5f7")
+        style.configure(".", background=BG, foreground=TXT, fieldbackground=COMBO, bordercolor=BG)
+        style.configure("Card.TLabelframe", background=CARD, bordercolor=CARD, relief="flat")
         style.configure("Card.TLabelframe.Label", font=("Segoe UI Semibold", 9),
-                        foreground="#374151", background="#f4f5f7")
+                        background=CARD, foreground=CARDLBL)
+        style.configure("Dark.TCombobox", fieldbackground=COMBO, background=COMBO, foreground=TXT,
+                        arrowcolor=TXT, bordercolor="#3a3d4a", lightcolor=COMBO, darkcolor=COMBO,
+                        selectbackground=COMBO, selectforeground=TXT, padding=2)
+        style.map("Dark.TCombobox",
+                  fieldbackground=[("readonly", COMBO)], foreground=[("readonly", TXT)],
+                  selectbackground=[("readonly", COMBO)], selectforeground=[("readonly", TXT)])
+        root.option_add("*TCombobox*Listbox.background", CARD)
+        root.option_add("*TCombobox*Listbox.foreground", TXT)
+        root.option_add("*TCombobox*Listbox.selectBackground", GREEN)
+        root.option_add("*TCombobox*Listbox.selectForeground", BG)
     except Exception:
-        style = None
+        pass
 
     var_guardar = tk.BooleanVar(value=engine.running.is_set())
     var_baus = tk.BooleanVar(value=engine.chests.is_set())
     var_synth = tk.BooleanVar(value=engine.synth.is_set())
     var_startup = tk.BooleanVar(value=is_startup_enabled())
+    cur_rar = (cfg.synth_max_rarity or "azul").capitalize()
+    var_rar = tk.StringVar(value=cur_rar if cur_rar in RAR_DISPLAY else "Azul")
 
     def on_guardar():
         engine.running.set() if var_guardar.get() else engine.running.clear()
@@ -199,10 +226,17 @@ def run(version: str = "") -> int:
 
     def on_synth():
         if var_synth.get():
-            engine._last_synth = 0.0   # roda o 1o ciclo logo ao marcar
+            engine._last_synth = 0.0   # roda o 1o ciclo logo ao ligar
             engine.synth.set()
         else:
             engine.synth.clear()
+
+    def on_rar(event=None):
+        cfg.synth_max_rarity = var_rar.get().lower()
+        try:
+            cfgmod.save(cfg)
+        except Exception as e:
+            print(f"[aviso] nao salvei a raridade: {e!r}")
 
     def on_startup():
         try:
@@ -210,51 +244,79 @@ def run(version: str = "") -> int:
         except Exception as e:
             print(f"[aviso] nao consegui ajustar inicio com Windows: {e!r}")
 
+    def sync_button():
+        if engine.active.is_set():
+            btn.configure(text="⏸  Pausar", bg=AMBER, activebackground=AMBER_D)
+        else:
+            btn.configure(text="▶  Iniciar", bg=GREEN, activebackground=GREEN_D)
+
+    def toggle_active():
+        engine.active.clear() if engine.active.is_set() else engine.active.set()
+        sync_button()
+
+    def mkcheck(parent, text, var, cmd):
+        return tk.Checkbutton(parent, text=text, variable=var, command=cmd,
+                              bg=CARD, fg=TXT, selectcolor=COMBO, activebackground=CARD,
+                              activeforeground=TXT, font=("Segoe UI", 10), anchor="w",
+                              highlightthickness=0, bd=0, padx=0)
+
     # cabecalho
-    head = ttk.Frame(root, padding=(16, 14, 16, 4))
-    head.pack(fill="x")
-    ttk.Label(head, text="Task Hero Auto", style="Title.TLabel").pack(anchor="w")
-    ttk.Label(head, text="Abra o jogo, marque abaixo o que você quer no automático, e pode deixar rodando.",
-              style="Sub.TLabel", wraplength=440, justify="left").pack(anchor="w", pady=(1, 0))
+    head = tk.Frame(root, bg=BG)
+    head.pack(fill="x", padx=18, pady=(16, 2))
+    tk.Label(head, text="Task Hero Auto", bg=BG, fg=TXT,
+             font=("Segoe UI Semibold", 16)).pack(anchor="w")
+    tk.Label(head, text="Marque o que você quer no automático e clique Iniciar.",
+             bg=BG, fg=SUB, font=("Segoe UI", 9)).pack(anchor="w")
 
     # status
-    strow = ttk.Frame(root, padding=(16, 6, 16, 8))
-    strow.pack(fill="x")
-    dot = tk.Label(strow, text="●", fg="#9aa0a6", bg="#f4f5f7", font=("Segoe UI", 12))
+    strow = tk.Frame(root, bg=BG)
+    strow.pack(fill="x", padx=18, pady=(10, 6))
+    dot = tk.Label(strow, text="●", bg=BG, fg="#6b7280", font=("Segoe UI", 12))
     dot.pack(side="left")
-    status_var = tk.StringVar(value="iniciando...")
-    ttk.Label(strow, textvariable=status_var, style="St.TLabel").pack(side="left", padx=(7, 0))
+    status_var = tk.StringVar(value="Pausado")
+    tk.Label(strow, textvariable=status_var, bg=BG, fg=TXT, font=("Segoe UI", 10)).pack(side="left", padx=(8, 0))
+
+    # botao mestre
+    btn = tk.Button(root, text="▶  Iniciar", command=toggle_active, relief="flat", cursor="hand2",
+                    bg=GREEN, fg="#0c1f14", activebackground=GREEN_D, activeforeground="#0c1f14",
+                    font=("Segoe UI Semibold", 13), bd=0)
+    btn.pack(fill="x", padx=18, pady=(2, 12), ipady=8)
 
     # automacoes
-    auto = ttk.LabelFrame(root, text=" Automações ", padding=(12, 8), style="Card.TLabelframe")
-    auto.pack(fill="x", padx=14, pady=(0, 8))
-    ttk.Checkbutton(auto, text="Guardar no baú quando o inventário encher        ·  F8",
-                    variable=var_guardar, command=on_guardar).pack(anchor="w", pady=3)
-    ttk.Checkbutton(auto, text="Abrir os baús (azul/marrom) que aparecem         ·  F7",
-                    variable=var_baus, command=on_baus).pack(anchor="w", pady=3)
-    ttk.Checkbutton(auto, text=f"Sintetizar no cubo a cada {int(cfg.synth_interval_min)} minutos             ·  F6",
-                    variable=var_synth, command=on_synth).pack(anchor="w", pady=3)
+    auto = ttk.LabelFrame(root, text=" Automações ", style="Card.TLabelframe", padding=(12, 10))
+    auto.pack(fill="x", padx=16, pady=(0, 8))
+    mkcheck(auto, "Guardar no baú quando o inventário encher", var_guardar, on_guardar).pack(anchor="w", fill="x", pady=2)
+    mkcheck(auto, "Abrir os baús que aparecem (azul, marrom e boss)", var_baus, on_baus).pack(anchor="w", fill="x", pady=2)
+    srow = tk.Frame(auto, bg=CARD)
+    srow.pack(anchor="w", fill="x", pady=2)
+    mkcheck(srow, "Sintetizar no cubo", var_synth, on_synth).pack(side="left")
+    tk.Label(srow, text="até", bg=CARD, fg=SUB, font=("Segoe UI", 9)).pack(side="left", padx=(6, 4))
+    combo = ttk.Combobox(srow, textvariable=var_rar, values=RAR_DISPLAY, state="readonly",
+                         width=10, style="Dark.TCombobox")
+    combo.pack(side="left")
+    combo.bind("<<ComboboxSelected>>", on_rar)
+    tk.Label(auto, text="Atalhos:  F8 guardar · F7 baús · F6 síntese · F9 sair",
+             bg=CARD, fg=SUB, font=("Segoe UI", 8)).pack(anchor="w", pady=(8, 0))
 
     # opcoes
-    optf = ttk.LabelFrame(root, text=" Opções ", padding=(12, 8), style="Card.TLabelframe")
-    optf.pack(fill="x", padx=14, pady=(0, 8))
-    ttk.Checkbutton(optf, text="Iniciar junto com o Windows",
-                    variable=var_startup, command=on_startup).pack(anchor="w", pady=2)
-    ttk.Label(optf, text="Deixe o jogo visível, fechar no X envia para a bandeja.",
-              style="Sub.TLabel").pack(anchor="w", pady=(4, 0))
+    optf = ttk.LabelFrame(root, text=" Opções ", style="Card.TLabelframe", padding=(12, 10))
+    optf.pack(fill="x", padx=16, pady=(0, 8))
+    mkcheck(optf, "Iniciar junto com o Windows", var_startup, on_startup).pack(anchor="w", pady=1)
+    tk.Label(optf, text="Deixe o jogo visível. Fechar no X envia para a bandeja.",
+             bg=CARD, fg=SUB, font=("Segoe UI", 8)).pack(anchor="w", pady=(4, 0))
 
-    # rodape com o credito (fixado embaixo)
+    # rodape com o credito
     cred = "feito por Lucas Spinola" + (f"   ·   {version}" if version else "")
-    foot = ttk.Frame(root, padding=(16, 4, 16, 8))
-    foot.pack(side="bottom", fill="x")
-    ttk.Label(foot, text=cred, style="Sub.TLabel").pack(anchor="center")
+    foot = tk.Frame(root, bg=BG)
+    foot.pack(side="bottom", fill="x", pady=(2, 8))
+    tk.Label(foot, text=cred, bg=BG, fg=SUB, font=("Segoe UI", 8)).pack(anchor="center")
 
     # atividade (log)
-    logf = ttk.LabelFrame(root, text=" Atividade ", padding=(4, 4), style="Card.TLabelframe")
-    logf.pack(fill="both", expand=True, padx=14, pady=(0, 8))
+    logf = ttk.LabelFrame(root, text=" Atividade ", style="Card.TLabelframe", padding=(6, 6))
+    logf.pack(fill="both", expand=True, padx=16, pady=(0, 8))
     logbox = tk.Text(logf, height=7, wrap="word", state="disabled", relief="flat",
-                     bg="#0f1117", fg="#cdd2dc", font=("Consolas", 9), padx=10, pady=8,
-                     highlightthickness=0, borderwidth=0)
+                     bg="#0f1117", fg="#cdd2dc", insertbackground="#cdd2dc",
+                     font=("Consolas", 9), padx=10, pady=8, highlightthickness=0, bd=0)
     logbox.pack(fill="both", expand=True)
 
     icon = _make_tray(root, engine)
@@ -269,10 +331,12 @@ def run(version: str = "") -> int:
     root.protocol("WM_DELETE_WINDOW", hide_to_tray)
 
     def poll():
-        # status + sincroniza caixinhas com o estado real (teclas/bandeja)
         status_var.set(engine.status)
-        any_on = engine.running.is_set() or engine.chests.is_set() or engine.synth.is_set()
-        dot.configure(fg="#22c55e" if any_on else "#9aa0a6")  # verde = ativo, cinza = parado
+        on = engine.active.is_set()
+        dot.configure(fg=GREEN if on else "#6b7280")
+        want = "⏸  Pausar" if on else "▶  Iniciar"
+        if btn.cget("text") != want:
+            sync_button()
         if var_guardar.get() != engine.running.is_set():
             var_guardar.set(engine.running.is_set())
         if var_baus.get() != engine.chests.is_set():
@@ -284,7 +348,6 @@ def run(version: str = "") -> int:
             logbox.configure(state="normal")
             logbox.insert("end", text)
             logbox.see("end")
-            # limita o tamanho
             if int(logbox.index("end-1c").split(".")[0]) > 500:
                 logbox.delete("1.0", "200.0")
             logbox.configure(state="disabled")
@@ -294,7 +357,7 @@ def run(version: str = "") -> int:
         root.after(180, poll)
 
     threading.Thread(target=engine.loop, daemon=True).start()
-    print("Pronto! Marque o que quer automatizar acima.")
+    print("Pronto! Marque o que quer e clique Iniciar.")
     print("Atalhos: F8 guardar · F7 baús · F6 síntese · F9 sair.")
     root.after(200, poll)
     root.mainloop()

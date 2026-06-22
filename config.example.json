@@ -11,6 +11,7 @@
   "chest_threshold": 0.78,
   "auto_synth": false,
   "synth_interval_min": 10.0,
+  "synth_max_rarity": "azul",
   "hotkeys": {
     "toggle": "f8",
     "chests": "f7",

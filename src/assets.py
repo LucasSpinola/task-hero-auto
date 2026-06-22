@@ -18,6 +18,12 @@ def _load_gray(name: str):
     return img
 
 
+def _load_gray_opt(name: str):
+    """Igual ao _load_gray, mas devolve None se o template nao existir."""
+    img = cv2.imread(str(UI_DIR / name), cv2.IMREAD_GRAYSCALE)
+    return img
+
+
 class Assets:
     def __init__(self):
         self.inven_full = _load_gray("inven_full.png")      # gatilho
@@ -26,6 +32,7 @@ class Assets:
         self.hero_banner = _load_gray("hero_banner.png")    # ancora do inventario (HERO)
         self.chest_blue = _load_gray("chest_blue.png")      # bau azul (preview no combate)
         self.chest_brown = _load_gray("chest_brown.png")    # bau marrom (preview no combate)
+        self.chest_boss = _load_gray_opt("chest_boss.png")  # bau do boss (vermelho)
         self.cube_banner = _load_gray("cube_banner.png")    # ancora da janela CUBE (sintese)
         with open(UI_DIR / "layout.json", encoding="utf-8") as f:
             self.layout = json.load(f)

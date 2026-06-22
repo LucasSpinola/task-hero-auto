@@ -70,5 +70,9 @@
   "cube_close_from_banner": [
     141,
     2
-  ]
+  ],
+  "cube_grid": {
+    "cols": [-40, 7, 54],
+    "rows": [134, 178, 222]
+  }
 }
