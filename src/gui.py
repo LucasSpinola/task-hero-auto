@@ -215,6 +215,7 @@ def run(version: str = "") -> int:
     var_baus = tk.BooleanVar(value=engine.chests.is_set())
     var_synth = tk.BooleanVar(value=engine.synth.is_set())
     var_startup = tk.BooleanVar(value=is_startup_enabled())
+    var_ask = tk.BooleanVar(value=cfg.ask_on_close)
     cur_rar = (cfg.synth_max_rarity or "azul").capitalize()
     var_rar = tk.StringVar(value=cur_rar if cur_rar in RAR_DISPLAY else "Azul")
 
@@ -243,6 +244,13 @@ def run(version: str = "") -> int:
             set_startup(var_startup.get())
         except Exception as e:
             print(f"[aviso] nao consegui ajustar inicio com Windows: {e!r}")
+
+    def on_ask():
+        cfg.ask_on_close = var_ask.get()
+        try:
+            cfgmod.save(cfg)
+        except Exception as e:
+            print(f"[aviso] nao salvei a opcao de fechar: {e!r}")
 
     def sync_button():
         if engine.active.is_set():
@@ -302,7 +310,8 @@ def run(version: str = "") -> int:
     optf = ttk.LabelFrame(root, text=" Opções ", style="Card.TLabelframe", padding=(12, 10))
     optf.pack(fill="x", padx=16, pady=(0, 8))
     mkcheck(optf, "Iniciar junto com o Windows", var_startup, on_startup).pack(anchor="w", pady=1)
-    tk.Label(optf, text="Deixe o jogo visível. Fechar no X envia para a bandeja.",
+    mkcheck(optf, "Perguntar ao fechar no X (minimizar ou sair)", var_ask, on_ask).pack(anchor="w", pady=1)
+    tk.Label(optf, text="Deixe o jogo visível enquanto estiver rodando.",
              bg=CARD, fg=SUB, font=("Segoe UI", 8)).pack(anchor="w", pady=(4, 0))
 
     # rodape com o credito
@@ -322,13 +331,25 @@ def run(version: str = "") -> int:
     icon = _make_tray(root, engine)
     tray_ok = icon is not None
 
-    def hide_to_tray():
+    def minimize():
         if tray_ok:
             root.withdraw()
         else:
             root.iconify()
 
-    root.protocol("WM_DELETE_WINDOW", hide_to_tray)
+    def on_close():
+        if cfg.ask_on_close:
+            import tkinter.messagebox as mb
+            r = mb.askyesnocancel("Task Hero Auto",
+                                  "Minimizar para a bandeja?\n\nSim = minimizar   ·   Não = sair")
+            if r is None:
+                return                       # cancelar: deixa a janela aberta
+            if r is False:
+                _do_quit(root, engine, icon)
+                return
+        minimize()
+
+    root.protocol("WM_DELETE_WINDOW", on_close)
 
     def poll():
         status_var.set(engine.status)

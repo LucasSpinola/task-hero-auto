@@ -17,7 +17,7 @@ import ui
 import vision
 from assets import Assets
 
-VERSION = "v2"
+VERSION = "v3.0.0"
 
 
 def set_dpi_aware() -> None:

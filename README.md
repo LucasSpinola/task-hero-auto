@@ -38,10 +38,10 @@ você faz outra coisa.
   monitor.
 - **Você no controle,** marca as caixinhas e clica em Iniciar, e dá pra pausar quando quiser, com o
   status e um histórico do que ele fez.
-- **Fica no seu canto,** quando você fecha no X ele vai pra bandeja do Windows e continua rodando, e dá
-  pra marcar pra abrir junto com o computador.
-- **Seguro,** começa tudo desligado, e se você jogar o mouse no canto superior esquerdo da tela ele para
-  qualquer clique na hora.
+- **Fica no seu canto,** quando você fecha no X ele pergunta se quer minimizar pra bandeja ou sair, e
+  continua rodando na bandeja, e dá pra marcar pra abrir junto com o computador.
+- **Seguro,** começa tudo desligado, e quando você mexe o mouse ele pausa na hora e volta sozinho quando
+  você para, então não atrapalha se precisar usar o PC, e jogar o mouse no canto também interrompe.
 
 ## O que você precisa
 
@@ -64,15 +64,16 @@ Bem pouca coisa, só isto:
    - **Sintetizar no cubo**, e escolha no menu até qual raridade ele sintetiza
    - **Iniciar junto com o Windows**, se quiser que ele abra sozinho ao ligar o PC
 5. Clique no botão **Iniciar**, e pronto, pode deixar rolando. Quando quiser parar é só clicar em
-   **Pausar**. Se quiser tirar a janela da frente, feche no **X** que ele continua na bandeja, e pra
-   encerrar de vez clique no ícone da bandeja e escolha **Sair**, ou aperte **F9**.
+   **Pausar**. Ao fechar no **X** ele pergunta se você quer minimizar pra bandeja ou sair, e dá pra
+   desligar essa pergunta nas Opções. Pra encerrar de vez também dá pelo ícone da bandeja em **Sair**,
+   ou apertando **F9**.
 
 Se preferir o teclado, dá pra ligar e desligar por atalho a qualquer momento, **F8** guarda, **F7**
 abre os baús, **F6** sintetiza e **F9** sai.
 
-> **Importante,** enquanto alguma coisa estiver ligada o programa mexe no mouse, então é melhor não usar
-> o computador ao mesmo tempo, e se precisar parar na hora, jogue o mouse no canto superior esquerdo da
-> tela, que ele aborta o clique.
+> **Importante,** enquanto está rodando o programa mexe o mouse, mas se você precisar usar o PC é só
+> mexer o mouse que ele pausa sozinho e volta quando você para, e jogar o mouse no canto superior
+> esquerdo da tela interrompe na hora.
 
 ### O Windows mostrou um aviso azul?
 

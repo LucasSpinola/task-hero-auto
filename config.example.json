@@ -12,6 +12,8 @@
   "auto_synth": false,
   "synth_interval_min": 10.0,
   "synth_max_rarity": "azul",
+  "pause_on_mouse_s": 1.5,
+  "ask_on_close": true,
   "hotkeys": {
     "toggle": "f8",
     "chests": "f7",

@@ -69,10 +69,13 @@ class Engine:
         self._last_action = 0.0
         self._last_synth = 0.0
         self._last_warn = 0.0
+        self._last_user_move = 0.0   # quando o usuario mexeu o mouse pela ultima vez
+        self._in_flow = False        # True enquanto o macro clica (ignora moves dele)
 
     def click_chests(self, scr) -> int:
         if self.tr.roi is None:
             return 0
+        actions.reset_macro_pos()
         l, t, r, b = self.tr.roi
         sub = scr.gray[t:b, l:r]
         n = 0
@@ -88,10 +91,36 @@ class Engine:
                 time.sleep(0.15)
         return n
 
+    # ---- monitor de mouse (pausa quando o usuario mexe) ----
+    def _on_move(self, x, y):
+        if self._in_flow:
+            return
+        lp = actions._LAST_MACRO_POS
+        if lp is not None and abs(x - lp[0]) <= actions.MOUSE_TOL and abs(y - lp[1]) <= actions.MOUSE_TOL:
+            return  # foi onde o macro deixou o mouse, nao conta como usuario
+        self._last_user_move = time.time()
+
+    def _start_mouse(self):
+        try:
+            from pynput import mouse
+        except Exception:
+            return None
+        l = mouse.Listener(on_move=self._on_move)
+        l.start()
+        return l
+
+    def _user_busy(self) -> bool:
+        return (time.time() - self._last_user_move) < self.cfg.pause_on_mouse_s
+
     def _tick(self) -> None:
         if not self.active.is_set():
             self.status = "Pausado"
             return
+        # pausa enquanto o usuario esta mexendo o mouse, volta sozinho quando parar
+        if self._user_busy():
+            self.status = "Pausado, mouse em uso"
+            return
+
         scr = vision.grab_screen()
         if self.tr.roi is None:
             self.tr.acquire(scr)
@@ -112,21 +141,34 @@ class Engine:
             if now - self._last_synth >= self.cfg.synth_interval_min * 60:
                 ui.log("Síntese: abrindo o cubo...", ui.MAGENTA)
                 self.status = "Sintetizando no cubo..."
+                self._in_flow = True
                 try:
                     actions.synth_flow(self.A, self.cfg, scale_hint=self.tr.scale,
                                        search_region=self.tr.region, verbose=False)
+                    self._last_synth = time.time()
+                    self.tr.roi = None
+                except actions.UserBusy:
+                    self.status = "Pausado, mouse em uso"
+                    self._last_user_move = time.time()
                 except Exception as e:
                     ui.err(f"síntese interrompida: {e!r}")
-                    self.synth.clear()
-                self._last_synth = time.time()
-                self.tr.roi = None
+                    self._last_synth = time.time()
+                finally:
+                    self._in_flow = False
                 return
 
         # F7: auto-abrir baus (independente do guardar)
         if self.chests.is_set():
-            n = self.click_chests(scr)
-            if n:
-                ui.log(f"Baú coletado ({n}).", ui.CYAN)
+            self._in_flow = True
+            try:
+                n = self.click_chests(scr)
+                if n:
+                    ui.log(f"Baú coletado ({n}).", ui.CYAN)
+            except actions.UserBusy:
+                self.status = "Pausado, mouse em uso"
+                self._last_user_move = time.time()
+            finally:
+                self._in_flow = False
 
         # F8: auto-guardar
         if self.running.is_set():
@@ -134,6 +176,7 @@ class Engine:
             if present and self._armed and (now - self._last_action) >= self.cfg.cooldown_s:
                 ui.log("Inventário cheio, guardando no baú...", ui.YELLOW)
                 self.status = "Guardando no baú..."
+                self._in_flow = True
                 try:
                     ok = actions.store_flow(self.A, self.cfg, scale_hint=self.tr.scale,
                                             search_region=self.tr.region, verbose=False)
@@ -141,27 +184,38 @@ class Engine:
                         ui.good("Itens guardados no baú.")
                     else:
                         ui.err("Não consegui guardar (o jogo está visível?).")
+                    self._last_action = time.time()
+                    self._armed = False
+                    self.tr.roi = None
+                except actions.UserBusy:
+                    self.status = "Pausado, mouse em uso"   # tenta de novo depois, nao desarma
+                    self._last_user_move = time.time()
                 except Exception as e:
                     ui.err(f"guardar interrompido: {e!r}")
-                    self.running.clear()
-                self._last_action = time.time()
-                self._armed = False
-                self.tr.roi = None
+                    self._last_action = time.time()
+                    self.tr.roi = None
+                finally:
+                    self._in_flow = False
             elif not present:
                 self._armed = True
 
     def loop(self) -> None:
-        while not self.quit.is_set():
-            t0 = time.time()
-            try:
-                self._tick()
-            except Exception as e:
-                print(f"[erro no loop] {e!r}")
-                time.sleep(0.5)
-            dt = time.time() - t0
-            rem = self.cfg.poll_interval_s - dt
-            if rem > 0:
-                time.sleep(rem)
+        listener = self._start_mouse()
+        try:
+            while not self.quit.is_set():
+                t0 = time.time()
+                try:
+                    self._tick()
+                except Exception as e:
+                    print(f"[erro no loop] {e!r}")
+                    time.sleep(0.5)
+                dt = time.time() - t0
+                rem = self.cfg.poll_interval_s - dt
+                if rem > 0:
+                    time.sleep(rem)
+        finally:
+            if listener is not None:
+                listener.stop()
 
 
 def _norm_key(key) -> str:

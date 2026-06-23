@@ -16,6 +16,8 @@ from config import Config
 pyautogui.FAILSAFE = True       # jogar o mouse no canto sup-esq aborta
 pyautogui.PAUSE = 0.04
 
+MOUSE_TOL = 8        # px: se o mouse saiu de onde o macro deixou, foi o usuario
+
 OPEN_CONF = 0.58     # confianca minima p/ clicar num botao (amarelo / bau)
 BANNER_CONF = 0.65   # confianca minima p/ o banner do STASH (durante o guardar)
 STATE_CONF = 0.72    # confianca p/ DECIDIR que algo "ja esta aberto" (mais rigoroso)
@@ -38,14 +40,37 @@ def _hue_rarity(h: float):
     return ("roxo", 5)   # 130..165
 
 
-def _click_abs(x: int, y: int, backend: str) -> None:
-    if backend == "pydirectinput":
-        import pydirectinput
+class UserBusy(Exception):
+    """O usuario mexeu o mouse durante a automacao: pausar (sem desligar)."""
 
-        pydirectinput.moveTo(int(x), int(y))
-        pydirectinput.click()
-    else:
-        pyautogui.click(int(x), int(y))
+
+_LAST_MACRO_POS = None   # ultima posicao onde o macro deixou o mouse
+
+
+def reset_macro_pos() -> None:
+    """Zera a referencia (chamar no inicio de cada fluxo)."""
+    global _LAST_MACRO_POS
+    _LAST_MACRO_POS = None
+
+
+def _click_abs(x: int, y: int, backend: str) -> None:
+    global _LAST_MACRO_POS
+    # se entre um clique e outro o mouse saiu de onde o macro deixou, foi o usuario
+    if _LAST_MACRO_POS is not None:
+        cur = pyautogui.position()
+        if abs(cur[0] - _LAST_MACRO_POS[0]) > MOUSE_TOL or abs(cur[1] - _LAST_MACRO_POS[1]) > MOUSE_TOL:
+            raise UserBusy()
+    try:
+        if backend == "pydirectinput":
+            import pydirectinput
+
+            pydirectinput.moveTo(int(x), int(y))
+            pydirectinput.click()
+        else:
+            pyautogui.click(int(x), int(y))
+    except pyautogui.FailSafeException:
+        raise UserBusy()
+    _LAST_MACRO_POS = pyautogui.position()
 
 
 def _save_shot(scr: "vision.Screen", pt, label: str, shots_dir, idx: int) -> None:
@@ -88,6 +113,7 @@ def _has_tab3(A: Assets, scale_hint, search_region) -> bool:
 def store_flow(A: Assets, cfg: Config, scale_hint: float | None = None,
                search_region=None, verbose: bool = False, shots_dir: str | None = None) -> bool:
     """Garante o STASH aberto, guarda em cada aba e fecha. True se concluiu."""
+    reset_macro_pos()
     wait = cfg.ui_wait_ms / 1000.0
     backend = cfg.click_backend
     shots = bool(shots_dir)
@@ -281,6 +307,7 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
         os.makedirs(shots_dir, exist_ok=True)
     idx = [0]
     L = A.layout
+    reset_macro_pos()
     try:
         max_level = RARITY_ORDER.index(str(cfg.synth_max_rarity).lower())
     except ValueError:
@@ -332,6 +359,8 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
         """Garante a janela CUBE aberta. Retorna (scr, match) ou (scr, None)."""
         s2, mc2 = find(A.cube_banner, STATE_CONF)
         if mc2 is not None and mc2.conf >= STATE_CONF:
+            if verbose:
+                ui.step(f"cubo ja aberto (conf={mc2.conf:.2f})")
             return s2, mc2
         s2, mh = find(A.hero_banner, STATE_CONF)
         if mh is None or mh.conf < STATE_CONF:
@@ -362,11 +391,22 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
         ui.err("sintese: a janela CUBE nao abriu.")
         return s2, None
 
+    def clear_center(s2, mc2):
+        """Tira o item que fica no centro do cubo (resultado de uma sintese) e dá foco."""
+        grid = L.get("cube_grid")
+        if not grid or mc2 is None:
+            return
+        f2 = mc2.scale
+        cox, coy = grid["cols"][1], grid["rows"][1]
+        click(s2, (mc2.cx + f2 * cox, mc2.cy + f2 * coy), "tirar_centro")
+        time.sleep(0.5)
+
     s, mc = ensure_cube()
     if mc is None:
         return False
     if verbose:
         ui.step(f"CUBE aberto (conf={mc.conf:.2f})")
+    clear_center(s, mc)   # ja-aberto pode ter item no centro; comeca limpo e da foco
 
     made = 0
     stop_label = None
@@ -380,7 +420,7 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
         fill = (mc.cx + f * L["cube_fill_from_banner"][0], mc.cy + f * L["cube_fill_from_banner"][1])
         crt = (mc.cx + f * L["cube_create_from_banner"][0], mc.cy + f * L["cube_create_from_banner"][1])
         ready = False
-        for fa in range(2):
+        for fa in range(3):
             click(s, fill, "preencher" if fa == 0 else "preencher_retry")
             end = time.time() + 2.0
             while time.time() < end:
@@ -410,11 +450,8 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
 
         # o item criado fica no centro do cubo; tira ele de la antes de re-preencher,
         # senao o auto-preenchimento usaria a cor recem-criada.
-        grid = L.get("cube_grid")
-        if grid:
-            cox, coy = grid["cols"][1], grid["rows"][1]
-            click(s, (mc.cx + f * cox, mc.cy + f * coy), "tirar_centro")
-            time.sleep(0.6)
+        if L.get("cube_grid"):
+            clear_center(s, mc)
         else:
             close_cube()
             s, mc = ensure_cube()
