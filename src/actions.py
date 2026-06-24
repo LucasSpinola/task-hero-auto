@@ -85,8 +85,11 @@ def _save_shot(scr: "vision.Screen", pt, label: str, shots_dir, idx: int) -> Non
     cv2.imwrite(os.path.join(shots_dir, f"{idx:02d}_{label}.png"), crop)
 
 
-def _has_tab3(A: Assets, scale_hint, search_region) -> bool:
-    """Existe a 3a aba do STASH? (slot quente/marrom = aba '3'; cinza = botao '+')."""
+def _has_tab(A: Assets, tab_key: str, scale_hint, search_region) -> bool:
+    """Existe a aba `tab_key` do STASH? (slot quente/marrom = aba; cinza = botao '+')."""
+    off = A.layout["offsets_from_banner_center"].get(tab_key)
+    if off is None:
+        return False
     s = vision.grab_screen(color=True)
     if s.bgr is None:
         return False
@@ -101,7 +104,7 @@ def _has_tab3(A: Assets, scale_hint, search_region) -> bool:
         m = vision.locate(g, A.stash_banner, vision.near(scale_hint))
     if m is None or m.conf < BANNER_CONF:
         return False
-    ox, oy = A.layout["offsets_from_banner_center"]["tab3"]
+    ox, oy = off
     x, y = int(m.cx + m.scale * ox), int(m.cy + m.scale * oy)
     h, w = s.bgr.shape[:2]
     if not (12 <= x < w - 12 and 12 <= y < h - 12):
@@ -216,10 +219,15 @@ def store_flow(A: Assets, cfg: Config, scale_hint: float | None = None,
             return False
 
     tabs = list(cfg.tabs)
-    if "tab3" not in tabs and _has_tab3(A, scale_hint, search_region):
-        tabs.append("tab3")
-        if verbose:
-            ui.step("3a aba do STASH detectada -> vou guardar nela tambem")
+    for tk in ("tab3", "tab4", "tab5"):
+        if tk in tabs:
+            continue
+        if _has_tab(A, tk, scale_hint, search_region):
+            tabs.append(tk)
+            if verbose:
+                ui.step(f"aba {tk[-1]} do STASH detectada -> vou guardar nela tambem")
+        else:
+            break  # as abas abrem em ordem; se a proxima nao existe, as seguintes tambem nao
 
     for tab in tabs:
         scr, mb = banner()
@@ -260,11 +268,12 @@ def _create_is_blue(crt_img) -> bool:
 
 
 def _grid_material(A, mc):
-    """Le as 9 celulas da grade do CUBE e classifica a raridade do material.
+    """Classifica a raridade pela COR DE FUNDO da celula (nao pelo sprite do item).
 
-    Retorna (label, nivel), nivel = indice em RARITY_ORDER (0=cinza .. 5=roxo),
-    ou (label, -1) se a grade estiver vazia. Se nao der p/ ler, devolve nivel 0
-    (cinza) p/ nao travar a sintese.
+    A raridade e o fundo da celula; o desenho do item fica no centro e nao conta.
+    Por isso a leitura usa um ANEL ao redor do centro: fundo cinza/branco (saturacao
+    baixa) = comum; fundo colorido = pela matiz. Retorna (label, nivel), nivel = indice
+    em RARITY_ORDER (0=cinza .. 5=roxo), ou (label, -1) se a grade estiver vazia.
     """
     g = A.layout.get("cube_grid")
     if not g:
@@ -275,25 +284,34 @@ def _grid_material(A, mc):
     hsv = cv2.cvtColor(s.bgr, cv2.COLOR_BGR2HSV)
     H, W = hsv.shape[:2]
     f = mc.scale
-    r = max(8, int(18 * f))
+    r_out = max(10, int(20 * f))   # meia-celula (pega o fundo)
+    r_in = max(6, int(12 * f))     # exclui o sprite central
+    gray_votes = 0
     hues = []
     filled = 0
     for oy in g["rows"]:
         for ox in g["cols"]:
             x, y = int(mc.cx + f * ox), int(mc.cy + f * oy)
-            if not (r <= x < W - r and r <= y < H - r):
+            if not (r_out <= x < W - r_out and r_out <= y < H - r_out):
                 continue
-            sub = hsv[y - r:y + r, x - r:x + r].reshape(-1, 3)
-            if len(sub[sub[:, 2] > 60]) < 0.15 * len(sub):
-                continue  # celula escura = vazia
+            blk = hsv[y - r_out:y + r_out, x - r_out:x + r_out]
+            mask = np.ones(blk.shape[:2], dtype=bool)
+            c = r_out - r_in
+            mask[c:-c, c:-c] = False           # tira o miolo (onde fica o sprite)
+            ring = blk[mask]
+            bright = ring[ring[:, 2] > 45]      # ignora os separadores escuros
+            if len(bright) < 0.2 * len(ring):
+                continue                         # celula vazia
             filled += 1
-            sat = sub[(sub[:, 1] > 70) & (sub[:, 2] > 60)]
-            if len(sat) > 0.10 * len(sub):
-                hues.extend(sat[:, 0].tolist())
+            sat = bright[bright[:, 1] > 60]
+            if len(sat) < 0.30 * len(bright):
+                gray_votes += 1                  # fundo sem cor = comum (cinza)
+            else:
+                hues.append(float(np.median(sat[:, 0])))
     if filled == 0:
         return ("vazio", -1)
-    if len(hues) < 30:
-        return ("cinza", 0)                # preenchido mas sem cor = comum (cinza)
+    if gray_votes >= len(hues):                  # maioria dos fundos sem cor
+        return ("cinza", 0)
     h = float(np.median(hues))
     name, level = _hue_rarity(h)
     return (f"{name} (H{h:.0f})", level)
