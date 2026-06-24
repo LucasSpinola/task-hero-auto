@@ -357,6 +357,42 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
             s, m = find(tpl, conf)
         return s, m
 
+    def cube_match():
+        """(s, match) do CUBE so se ele ganhar do HERO/STASH no MESMO frame.
+
+        Os tres banners tem a mesma moldura, so muda o texto, entao o cube_banner casa
+        ~0.76 no HERO quando o cubo esta fechado e o inventario aberto. Comparar com os
+        rivais no mesmo frame evita confundir 'cubo aberto' com o HERO/STASH.
+        """
+        s = vision.grab_screen(color=shots)
+
+        def loc(tpl):
+            if search_region:
+                l, t, r, b = search_region
+                m = vision.locate(s.gray[t:b, l:r], tpl, None)
+                if m is not None:
+                    m.left += l
+                    m.top += t
+                return m
+            return vision.locate(s.gray, tpl, None)
+
+        mc2 = loc(A.cube_banner)
+        if mc2 is None or mc2.conf < STATE_CONF:
+            return s, None
+        rivals = [loc(A.hero_banner), loc(A.stash_banner)]
+        best_rival = max((m.conf for m in rivals if m is not None), default=0.0)
+        if mc2.conf < best_rival - 0.08:
+            return s, None      # na verdade casou no HERO/STASH, nao no cubo
+        return s, mc2
+
+    def wait_cube(timeout=3.0):
+        end = time.time() + timeout
+        s, m = cube_match()
+        while m is None and time.time() < end:
+            time.sleep(0.3)
+            s, m = cube_match()
+        return s, m
+
     def click(s, pt, label):
         idx[0] += 1
         _save_shot(s, pt, label, shots_dir, idx[0])
@@ -366,8 +402,8 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
         _click_abs(ax, ay, cfg.click_backend)
 
     def close_cube():
-        s2, mc2 = find(A.cube_banner, STATE_CONF)
-        if mc2 is not None and mc2.conf >= STATE_CONF:
+        s2, mc2 = cube_match()
+        if mc2 is not None:
             f2 = mc2.scale
             click(s2, (mc2.cx + f2 * L["cube_close_from_banner"][0],
                        mc2.cy + f2 * L["cube_close_from_banner"][1]), "fechar_cubo")
@@ -375,8 +411,8 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
 
     def ensure_cube():
         """Garante a janela CUBE aberta. Retorna (scr, match) ou (scr, None)."""
-        s2, mc2 = find(A.cube_banner, STATE_CONF)
-        if mc2 is not None and mc2.conf >= STATE_CONF:
+        s2, mc2 = cube_match()
+        if mc2 is not None:
             if verbose:
                 ui.step(f"cubo ja aberto (conf={mc2.conf:.2f})")
             return s2, mc2
@@ -403,8 +439,8 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
                 mh = mh2
             click(s2, (mh.cx + mh.scale * off[0], mh.cy + mh.scale * off[1]),
                   "abrir_cubo" if attempt == 0 else "abrir_cubo_retry")
-            s2, mc2 = wait(A.cube_banner, 3.0)
-            if mc2 is not None and mc2.conf >= STATE_CONF:
+            s2, mc2 = wait_cube(3.0)
+            if mc2 is not None:
                 return s2, mc2
         ui.err("sintese: a janela CUBE nao abriu.")
         return s2, None
@@ -429,8 +465,8 @@ def synth_flow(A, cfg, scale_hint=None, search_region=None, verbose=False, shots
     made = 0
     stop_label = None
     for _ in range(40):
-        s, mc = find(A.cube_banner, STATE_CONF)
-        if mc is None or mc.conf < STATE_CONF:
+        s, mc = cube_match()
+        if mc is None:
             s, mc = ensure_cube()
         if mc is None:
             break
