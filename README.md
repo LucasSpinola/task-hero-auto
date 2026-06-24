@@ -29,13 +29,13 @@ você faz outra coisa.
 ## O que faz
 
 - **Guardar no baú,** quando aparece o aviso de inventário cheio, ele abre o baú e guarda tudo, em todas
-  as abas que você tiver como 1, 2 e também a 3, que ele percebe sozinho se já possui.
+  as abas que você tiver, da 1 até a 5, que ele percebe sozinho quais você já tem.
 - **Abrir os baús,** aquelas caixinhas que aparecem no combate, a azul, a marrom e a do boss, a vermelha,
   ele clica assim que surgem.
 - **Sintetizar no cubo,** de tempos em tempos ele abre o cubo, preenche e cria sozinho, e você escolhe
   até qual raridade ele vai, de cinza até roxo, o intervalo vem em 10 minutos e dá pra mudar.
-- **Funciona sem ajuste,** ele se vira com a janela do jogo em qualquer lugar e tamanho, e em qualquer
-  monitor.
+- **Funciona sem ajuste,** com o jogo na escala 1x ele se vira com a janela em qualquer lugar da tela e
+  em qualquer monitor.
 - **Você no controle,** marca as caixinhas e clica em Iniciar, e dá pra pausar quando quiser, com o
   status e um histórico do que ele fez.
 - **Fica no seu canto,** quando você fecha no X ele pergunta se quer minimizar pra bandeja ou sair, e
@@ -49,6 +49,7 @@ Bem pouca coisa, só isto:
 
 - Um computador com **Windows 10 ou 11**.
 - O jogo **Task Hero** aberto e **à mostra** na tela, sem minimizar e sem cobrir com outra janela.
+- O jogo na **escala de janela 1x** (o tamanho normal, sem zoom), que é como ele reconhece os botões.
 - O arquivo **`TaskHeroAutoStash.exe`**, que você baixa pronto, sem instalar nada e sem precisar de
   Python.
 
@@ -83,7 +84,8 @@ e depois em **Executar assim mesmo**.
 
 ## Se não funcionar
 
-- **Diz que está procurando o jogo,** deixe a tela de combate visível e não coberta por outra janela.
+- **Diz que está procurando o jogo,** deixe a tela de combate visível e não coberta por outra janela, e
+  confira que o jogo está na escala de janela 1x, sem zoom.
 - **Não guarda quando enche,** abra com `TaskHeroAutoStash.exe --debug`, que ele mostra um número de
   confiança, e ajuste o `trigger_threshold` no arquivo `config.json` que fica ao lado do programa.
 - **Clicou no lugar errado,** rode `TaskHeroAutoStash.exe --once`, que ele faz um ciclo só e salva
